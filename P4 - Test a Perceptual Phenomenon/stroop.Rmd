@@ -1,0 +1,105 @@
+**Test a Perceptual Phenomenon by Adam McDonald**
+========================================================
+
+The Stroop Effect comes from an experiment that tries to show the effect
+of interference on the reaction time of a task. In the test people are shown a 
+set of names of colors printed in their respective color (e.g., the word red 
+printed in red). The time it takes to read the set aloud is recorded. Then they
+are shown a set of names of colors printed in colors different than the name
+(e.g., the word red printed in blue). The time to read this set is recorded. 
+In theory the congruent set will take less time to read than the incongruent
+set because the different colors in the incongruent set will cause 
+interference and slow downs reaction times.
+
+## Variables
+In this experiment, the independent variable is which set is read aloud, 
+congruent or incongruent. The dependent is the length of time that it takes the 
+person to read the set of words aloud. 
+
+##Hypotheses
+The test will be a one-sided paired t test. It will be one-sided because I am 
+trying to determine if the time to read the incongruent set will be 
+significantly slower than the time to read the congruent set 
+Since the two sets were given to the same people to read, it will be a paired
+test. Since we only have samples and don't know population statistics the test
+will be a t-test. As we will see below in the plots, the distributions of
+the samples are normal and we assume the population distribution would be normal
+as well. The size of the sample is large enough at 24, and the variance of each
+sample is relatively close. Based on these assumptions the use of a t-test is
+valid.
+
+The null hypothesis is that the incongruent population average time to read is
+less than or equal to the congruent population average time to read.  
+H~0~: $\mu$~Incongruent~ <= $\mu$~Congruent~
+
+The alternative hypothesis is that the incongruent population average time to 
+read is greater than the congurent population average time to read.  
+H~A~: $\mu$~Incongruent~ > $\mu$~Congruent~
+
+## Dataset
+
+The dataset consists of 24 observations with the length of time it took to
+read both the congurent and incongruent sets I have also included the 
+difference between the 2 times. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, setup}
+library(ggplot2)
+library(gridExtra)
+df <- read.csv('StroopData.csv')
+print(df)
+```
+
+## Descriptive Statistics
+
+**Congruent Sample**  
+$\bar{x}$~Congruent~ = 14.05  
+sd~Congruent~ = 3.56
+
+**Incongruent Sample**  
+$\bar{x}$~Incongruent~ = 22.02  
+sd~Incongruent~ = 4.80
+
+## Histograms of Congruent and Incongruent samples
+
+```{r echo=FALSE,message=FALSE,warning=FALSE,fig.width=10,fig.height=10,plots}
+p1 <- ggplot(aes(x=Congruent),data=df) +
+  xlab('Congruent Sample (seconds)') +
+  geom_histogram(binwidth=1,fill = "red",color='black',alpha=.4) +  
+  geom_vline(aes(xintercept = mean(Congruent)),size = 1, colour = "red",
+                   linetype = "dashed") + xlim(8,36)
+
+p2 <- ggplot(aes(x=Incongruent),data=df) +
+  xlab('Incongruent Sample (seconds)') +
+  geom_histogram(binwidth=1,fill = "blue",color='black',alpha = 0.4) +
+  geom_vline(aes(xintercept = mean(Incongruent)),size = 1, colour = "blue",
+                   linetype = "dashed") + xlim(8,36)
+
+grid.arrange(p1, p2)
+```
+
+As seen in the histograms both of the samples are relatively normal, but the
+inconguent sample is shifted to the right of the x-axis. The t test will
+show if the shift right is statistically significant.
+
+## One-Sided Paired t test
+
+$\alpha$ = .05  
+t critical = -1.71  
+n = 24  
+df = 23  
+$\bar{x}$~Congruent-Incongruent~ = -7.96  
+s = 4.86  
+se = .99  
+t = -8.02  
+p < .0005
+
+Using confidence level of 95% and an $\alpha$ of .05 the t critical value is 
+-1.71. The t statistic from the test of -8.02 is much lower than the t critical
+value, which means that the null hypothesis is rejected. The difference between 
+the means of -7.96 is statistically significant. This can also be seen by 
+comparing the $\alpha$ of .05 to the p-value. Using the t table the p-value is
+less than .0005, which means that it is less than the $\alpha$.
+
+As expected changing the color used to print the color name does have an
+effect on reaction time. When the printed color is different than the color 
+name it takes more time to read the word aloud.

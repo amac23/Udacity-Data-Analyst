@@ -1,0 +1,589 @@
+**Prosper Loan Data Exploration by Adam McDonald**
+========================================================
+
+# Overview of Dataset
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+library(ggplot2)
+library(GGally)
+library(scales)
+library(memisc)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Load_the_Data}
+
+loanData <- read.csv('prosperLoanData.csv')
+
+```
+
+The dataset includes 113,937 loans with 81 variables. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, dim}
+
+dim(loanData)
+
+```
+  
+The variables are:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, variables}
+
+names(loanData)
+
+```
+  
+I will limit the data to only the below 10 variables that I would like to 
+explore further.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, filter_dataframe}
+
+df <- loanData[c("LoanStatus", "BorrowerAPR", "EstimatedReturn", 
+                 "ProsperRating..numeric.", "EmploymentStatus", 
+                 "CreditScoreRangeLower", "DebtToIncomeRatio", "IncomeRange", 
+                 "LoanOriginationDate", "MonthlyLoanPayment")]
+
+names(df)
+summary(df)
+
+```
+
+# Univariate Plots Section
+
+First I will look at variables related to the loans:
+
+### Loan Origination Date
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, loanoriginationdate}
+
+summary(as.Date(df$LoanOriginationDate))
+
+ggplot(aes(x = substr(LoanOriginationDate, 1, 4)), data = df) +
+  geom_histogram(fill = "steelblue", color = "black", stat = "count") +
+  xlab("Loan Origination Year") +
+  ylab("Count")
+
+```
+
+The data includes loans from November 2005 through March 2014. 
+There was a low point during the financial crisis in 2009, but we see
+solid growth in the number of loans each year from there.
+
+### Loan Status
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, loanstatus}
+
+summary(df$LoanStatus)
+
+ggplot(aes(x = LoanStatus), data = df) +
+  geom_bar(aes(y = (..count..)/sum(..count..)*100),
+           fill = "steelblue", color = "black", stat = "count") +
+  ylab("Percent of Total") +
+  xlab("Loan Status") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+About 15% of loans fall into either Charged Off or Defaulted, while just under 
+85% or Completed or Current. The remaining items are small amounts of the total
+number of loans. I will convert the Loan Status into a column that is either
+Performing or Non-Performing. The performing will be either completed or 
+current and the non-perfomring will be anything else.
+
+### Loan Status
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, loanstatus2}
+
+df$LoanStatus <- ifelse(df$LoanStatus == 'Completed' | df$LoanStatus == 
+                          'Current', 'Performing', 'Non-Performing')
+
+summary(df$LoanStatus)
+
+ggplot(aes(x = LoanStatus), data = df) +
+  geom_bar(aes(y = (..count..)/sum(..count..)*100),
+           fill = "steelblue", color = "black", stat = "count") +
+  ylab("Percent of Total") +
+  xlab("Loan Status") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+### Monthly Loan Payment
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, MonthlyLoanPayment}
+
+summary(df$MonthlyLoanPayment)
+
+ggplot(aes(x = MonthlyLoanPayment), data = df) +
+  geom_histogram(fill = "steelblue", color = "black", binwidth = 50) +
+  ylab("Count") +
+  xlab("Monthly Loan Payment")+
+  geom_vline(aes(xintercept = mean(MonthlyLoanPayment)),col='blue',size=2)
+
+```
+
+This is right skewed with the average amount aroud $270 per month and 
+the median around $217 per month. Most loans
+have a pretty small monthly payment amount. 
+ 
+ 
+ 
+Now I will shift to variables that are related to the borrower:
+
+### Employment Status
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, EmploymentStatus}
+
+summary(df$EmploymentStatus)
+
+ggplot(aes(x = EmploymentStatus), data = df) +
+  geom_histogram(fill = "steelblue", color = "black", stat = "count") +
+  xlab("Employment Status") +
+  ylab("Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+Borrowers are mostly employed, but there is a small amount not employed or 
+retired.
+
+### Income Range
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, IncomeRange}
+
+summary(df$IncomeRange)
+
+ggplot(aes(x = IncomeRange), data = df) +
+  geom_histogram(fill = "steelblue", color = "black", stat = "count") +
+  xlab("Income Range") +
+  ylab("Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+Looks like the factors are out of order for the Income Range, I will adjust 
+this and redisplay the graph.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, IncomeRange2}
+
+df$IncomeRange <- factor(df$IncomeRange, levels = c("$0","$1-24,999",
+                                                    "$25,000-49,999",
+                                                    "$50,000-74,999",
+                                                    "$75,000-99,999",
+                                                    "$100,000+","Not displayed",
+                                                    "Not employed"))
+ggplot(aes(x = IncomeRange), data = df) +
+  geom_histogram(fill = "steelblue", color = "black", stat = "count") +
+  xlab("Income Range") +
+  ylab("Count") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+The income range isn't quite normally distributed. 
+It appears a little off, with $100,000 being somewhat high. This could be 
+because the income range is self reported or it could just be higher income 
+people are using more loans.
+
+### Debt to Income Ratio
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, DebtToIncomeRatio}
+
+summary(df$DebtToIncomeRatio)
+
+ggplot(aes(x = DebtToIncomeRatio), data = df) +
+  geom_histogram(fill = "steelblue", color = "black",stat = "count") +
+  xlab("Debt to Income Ratio") +
+  ylab("Count")
+
+```
+
+This is skewed by outliers, and tough to see the distribution.
+I am going to exclude the top 1% from the graph.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, DebtToIncomeRatio2}
+
+ggplot(aes(x = DebtToIncomeRatio), data = subset(df,!is.na(DebtToIncomeRatio)))+
+  geom_histogram(fill = "steelblue", color = "black",stat = "count") +
+  xlab("Debt to Income Ratio") +
+  ylab("Count") +
+  xlim(limits=c(0,quantile(
+    subset(df,!is.na(DebtToIncomeRatio))$DebtToIncomeRatio,.99))) +
+  geom_vline(aes(xintercept = mean(DebtToIncomeRatio)),col='blue',size=2)
+```
+
+The distribution is slightly right skewed, The mean is 0.276, while the median is
+only 0.22.
+
+### Credit Score
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, CreditScoreRangeLower}
+
+summary(df$CreditScoreRangeLower)
+
+ggplot(aes(x = CreditScoreRangeLower), data = 
+         subset(df, df$CreditScoreRangeLower > 0.0)) +
+  geom_histogram(fill = "steelblue", color = "black", binwidth = 10) +
+  xlab("Credit Score") +
+  ylab("Count") +
+  geom_vline(aes(xintercept = mean(CreditScoreRangeLower)),col='blue',size=2)
+
+```
+
+The distribution of credit scores is centered at a median of 680 and a mean
+or 686. It is barely skewed left with lower credit scores most likely not 
+being approved as frequently.
+
+### Prosper Rating
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, ProsperRating}
+
+summary(df$ProsperRating..numeric.)
+
+ggplot(aes(x = factor(ProsperRating..numeric.)), data = df) +
+  geom_bar(fill = "steelblue", color = "black") +
+  xlab("Prosper Rating") +
+  ylab("Count")
+
+```
+
+The Prosper Rating distribution is relatively normal.
+This makes sense as they are rating the risk of loans. They don't necessarily
+want too many highly rated loans because those don't provide much of a return,
+but the higher return on riskier loans doesn't necessarily outwiegh the risk
+of default.
+
+### Borrower APR
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, BorrowerAPR}
+
+summary(df$BorrowerAPR)
+
+ggplot(aes(x = BorrowerAPR), data = subset(df,!is.na(BorrowerAPR))) +
+  geom_histogram(fill = "steelblue", color = "black", binwidth =  .01) +
+  xlab("Borrower APR") +
+  ylab("Count") +  
+  geom_vline(aes(xintercept = mean(BorrowerAPR)),col='blue',size=2)
+
+```
+
+The APR distribution is unimodal, but has an outlier peak around .375. 
+The mean is .20976 and median is .21883. 
+They could just use a higher rate for many risky loans to offset the risk of
+default.
+
+
+### Estimated Return
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, EstimatedReturn}
+
+summary(df$EstimatedReturn)
+
+ggplot(aes(x = EstimatedReturn), data = subset(df,!is.na(EstimatedReturn))) +
+  geom_histogram(fill = "steelblue", color = "black", binwidth = .005) +
+  xlab("Estimated Return") +
+  ylab("Count") +  
+  geom_vline(aes(xintercept = mean(EstimatedReturn)),col='blue',size=2)
+
+```
+
+The estimated return follows a similar distribution as the APR, which makes 
+sense because the interest rate is set to give a return based on the amount 
+of risk involved in the loan.
+
+# Univariate Analysis
+
+### What is/are the main feature(s) of interest in your dataset?
+I am most interested in the interest rate for the loans. I am interested to see
+what impacts the interest rates the most and how it relates to the estimated
+return.
+
+### What other features in the dataset do you think will help support your \
+investigation into your feature(s) of interest?
+I am interested in seeing if the Loan Status can be predicted by any certain
+variable. For example, do lower Prosper Ratings lead to higher non-performance 
+rates? I am also interested to see which variables influence interest rates
+the most.
+
+### Did you perform any operations on the data to tidy, adjust, or change the form \
+of the data? If so, why did you do this?
+I changed the order of factors in Income Range so that they showed in order
+when creating the histogram. I also changed Loan Origination Date to a date 
+format instead of a factor. Finally, I changed the Loan Status to be either
+performing or non-performing to make looking at the status a little easier.
+
+# Bivariate Plots Section
+
+```{r echo=FALSE,message=FALSE,warning=FALSE,fig.width=15,fig.height=20,ggpair}
+df$LoanOriginationDate <- as.Date(df$LoanOriginationDate , "%Y-%m-%d")
+
+columnnames = c('Loan Status','Borrower APR','Estimated Return','Prosper Rating',
+                'Employment Status','Credit Score','Debt to Income',
+                'Income Range','Loan Orig Date','Monthly Loan Payment')
+
+ggpairs(df,columnLabels = columnnames,
+        labeller = label_wrap_gen(10), axisLabels = 'none')
+```
+
+The highest correlation appears to be between the Prosper Rating and the 
+Borrower APR. Next is the Estimated Return and Interest Rate followed by the 
+Estimated Return and Prosper Rating. This makes sense, the Interest Rate is 
+based off the Prosper Rating and the Estimated Return is mostly based off the 
+Prosper Rating, but also from the size and length of the loan.
+
+I will begin by looking at the Loan Status and different variables.
+
+### Prosper Rating by Loan Status
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, prosperratingboxplot}
+ggplot(aes(y = ProsperRating..numeric., x = LoanStatus), data = df) +
+  geom_boxplot()
+```
+
+Here we see that the higher the Prosper Rating the more likely the loan is 
+to be performing. It seems that the Prosper Rating is pretty good at predicting
+how risky the loan is. The median for Non-Performing loans is 3 and the median
+of performing loans is 4.
+
+### Credit Score by Loan Status
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, creditscoreloanstatus}
+ggplot(aes(y = CreditScoreRangeLower, x = LoanStatus), data = 
+         subset(df, df$CreditScoreRangeLower > 0.0)) +
+  geom_boxplot()
+```
+
+It looks like the Credit Score is not quite as good at predicting if a loan
+will be completed or not. As seen above the correlation between Credit Score
+and Prosper Rating is only -0.346. There are other factors that go into the 
+Prosper Rating that help predict Loan Status. The median score of 
+Non-Performing loans is about 660 while Performing loans have a median
+score just above 700.
+
+### Income Range by Loan Status
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, incomerangeloanstatus}
+ggplot(aes(x = IncomeRange, fill = LoanStatus), data = 
+         subset(df, df$CreditScoreRangeLower > 0.0)) +
+  geom_histogram(stat='count') +
+  scale_fill_brewer(palette="Blues") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Income Range definitely doesn't predict if a loan will be completed or not. 
+The percentage of non-performing loans doesn't increase with an increase in 
+income.
+
+### Loan Origination Date by Loan Status
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, origdateloanstatus}
+ggplot(aes(y = LoanOriginationDate, x = LoanStatus), data = df) +
+  geom_boxplot()
+```
+
+Over time a greater amount of loans have completed or are current. It would be
+interesting to see if that is because people taking loans have better credit 
+scores some other factor. The median of Non-Performing loans is late 2008,
+while the median of Performing loans is late 2012.
+
+Now I will take a look at the relationship of Borrower APR with different
+variables.
+
+### Prosper Rating by Borrower APR
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, APRprosperrating}
+ggplot(aes(y = BorrowerAPR, x = factor(ProsperRating..numeric.)), data = 
+         subset(df, !is.na(ProsperRating..numeric.))) +
+  geom_boxplot()
+```
+
+As the Prosper Rating increases the Borrower APR charged goes down, which makes
+sense because the less risky the loan the less interest borrowers have to pay.
+The boxplots show  that the median APR goes down with each increase to the 
+prosper rating.
+As we saw above the correlation is -0.962 between these 2 variables.
+It also looks like the variances of rates goes down as the Prosper Rating 
+increases. This may be because any Prosper Rating lower than 4 takes more 
+factors into account when choosing an interest rate.
+
+### Estimated Return by Borrower APR
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, estimatedreturnAPR}
+ggplot(aes(y = EstimatedReturn, x = BorrowerAPR), data = df) +
+  geom_point() + geom_smooth(method='lm')
+```
+
+The Estimated Return and Borrower APR are positively correlated at 0.794. There
+is definitely a relationship that as the rate increases the return does as well.
+There is another factor here that is causing the estimated return to shift
+up or down, we will explore this further in the Multivarate Analysis.
+
+### Prosper Rating by Estimated Return
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, estimatedreturnprosperrating}
+ggplot(aes(y = EstimatedReturn, x = factor(ProsperRating..numeric.)), data = 
+         subset(df, !is.na(ProsperRating..numeric.))) +
+  geom_boxplot()
+```
+
+It looks likes Prosper attempts to keep their estimated return about the same
+across the different ratings. There is a -0.66 correlation between the 2 
+variables that seems to be driven by to 0 rated loans having the much lower 
+estimated returns.
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. How did the feature(s) of interest vary with other features in \
+the dataset?
+First I looked at the relationship between Loan Status and a few other 
+variables. It appears that the Prosper Rating does show an ability to predict 
+if a loan will complete or not. Some of the factors that go into the Prosper 
+Rating like the Credit Score and Income Range by themselves aren't a good 
+indicator as to whether a loan will complete or not. 
+I also looked at the relationships between Borrower APR, Estimated Return, and
+Prosper Rating. These are all pretty strongly correlated and have the closest
+relationships of any variables in the dataset. 
+
+### What was the strongest relationship you found?
+The highest correlation was between Prosper Rating and Borrower APR. It was a
+0.962 correlation, which makes sense, because they probalby use the rating to
+determine what the APR will be for each loan.
+
+# Multivariate Plots Section
+
+### Estimated Return by Borrower APR and Prosper Rating
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, estimatedreturnprosperratingAPR}
+ggplot(aes(y = EstimatedReturn, x = BorrowerAPR, color = 
+             factor(ProsperRating..numeric.)), data = df) +
+  scale_color_brewer(palette="Blues") + theme_dark() +
+  geom_point() + geom_smooth(method='lm',color='red')
+```
+
+Here I look again at Estimated Return by Borrower APR, but add in a color
+for the Propser Rating. This helps explains the banding that occurs. Yes
+the Estimated Return does go up as the APR increases, but the line
+is shifted up or down based on the Prosper Rating. The higher the Prosper
+Rating the higher the floor of the Estimated Return is.
+
+### Estimated Return by Borrower APR and Loan Origination Date
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,estimatedreturnprosperratingdate}
+ggplot(aes(y = EstimatedReturn, x = BorrowerAPR, color = 
+             LoanOriginationDate), data = df) +
+  geom_point()  + geom_smooth(method='lm',color='red')
+```
+
+This is pretty interesting. It looks like the slope of the Estimated Return
+vs Borrower APR has gotten lower over time. For more recent loans the 
+increase in the interest rate doesn't increase the estimated return as much 
+as it used to.
+
+### Prosper Rating by Loan Status and Borrower APR
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, prosperratingloanstatusAPR}
+ggplot(aes(y = ProsperRating..numeric., x = LoanStatus, color = 
+             BorrowerAPR), data = df) +
+  geom_jitter()
+```
+
+This plot shows that the higher the Prosper Rating the lower the percentage
+of Non-Performing loans and the lower the APR. What is somewhat interesting
+is there are some low Prosper Rating that have a higher APR, but are still
+current or completed. Looking it appears there are more of those loans in
+the Performing status.
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. Were there features that strengthened each other in terms of \
+looking at your feature(s) of interest?
+The Estimated Return, Prosper Rating, and Borrower APR are all three closely
+related. There is a strong positive linear relationship between the interest
+rate and the return. This linear relationship is shifted up or down based on 
+the Prosper Rating.
+
+### Were there any interesting or surprising interactions between features?
+I was surprised that the slope of the Estimated Return vs Borrower APR has 
+gotten lower over time. It seems that they have made some changes to make the
+estimated return less variable regardless of the interest rates.
+
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_One}
+ggplot(aes(y = ProsperRating..numeric., x = LoanStatus), data = df) +
+  geom_boxplot() +
+  ylab("Prosper Rating (numeric 0-7)") +
+  xlab("Loan Status") +
+  ggtitle("Prosper Rating by Loan Status")
+```
+
+### Description One
+
+I like this simple boxplot because it clearly shows that the Prosper Rating
+historically has done a good job of rating the riskiness of a loan. Non-Performing
+loans have had lower Prosper Ratings assigned at the origination of the loan.
+
+### Plot Two
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Two}
+ggplot(aes(y = EstimatedReturn, x = BorrowerAPR, color = 
+             factor(ProsperRating..numeric.)), data = df) +
+  geom_point() + scale_color_brewer(palette="Blues") + theme_dark() +
+  ylab("Estimated Return (percentage)") +
+  xlab("Borrower APR (percentage)") +
+  ggtitle("Estimated Return by Borrower APR and Prosper Rating") +
+  labs(color = "Prosper Rating")  + geom_smooth(method='lm',color='red')
+```
+
+### Description Two
+
+This plot does a good job of illustrating the relationship between Estimated
+Return, Borrower APR, and Prosper Rating. There is a strong positive linear 
+relationship between the interest rate and the return. This linear relationship
+is shifted up or down based on the Prosper Rating. Including both
+APR and Prosper Rating in a model could probably predict Estimated Return
+pretty well.
+
+### Plot Three
+```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Three}
+ggplot(aes(y = EstimatedReturn, x = BorrowerAPR, color = 
+             LoanOriginationDate), data = df) +
+  geom_point() +
+  ylab("Estimated Return (percentage)") +
+  xlab("Borrower APR (percentage)") +
+  ggtitle("Estimated Return by Borrower APR and Loan Origination Year") +
+  labs(color = "Loan Origination Year")  + geom_smooth(method='lm',color='red')
+```
+
+### Description Three
+
+This plot is similar to the second plot, but changes out the Prosper Rating for
+the Loan Origination Year. It again shows the relationship between Estimated
+Return and Borrower APR, but shows how it is changing over time. In later years
+the slope of the line decreases, meaning an increase in APR in 2014 increases
+the Estimated Return less than it it did in 2006.
+
+------
+
+# Reflection
+
+Using the Prosper loan data set, I selected 10 of the 81 variables to explore
+further. I wanted to investigate the Loan Status and adjusted the variable 
+to be Performing or Non-Performing to find how many loans completed or are 
+current versus the other categories. I wanted to look and see which factors 
+led to a loan not completing. I also looked at the Borrower APR, Estimated
+Return, and Prosper Score. I wanted to see the relationship between the 3.
+
+One of the difficuties was trying to choose which variables to look at. With 81
+different variables it was necessary to narrow down my exploration. It would 
+be interesting to go back and look at other variables in the data set knowing
+what I do about the 10 I chose.
+
+For future Analysis I think it would be interesting to create a model that 
+usese variables to predict the Prosper Rating. I would then change the model
+and see if I could create a rating that is even better predicting how a loan
+will perform.
